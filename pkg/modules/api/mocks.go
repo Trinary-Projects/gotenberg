@@ -1,8 +1,11 @@
 package api
 
 import (
+	"github.com/alexliesenfeld/health"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
+
+	"github.com/gotenberg/gotenberg/v8/pkg/gotenberg"
 )
 
 // ContextMock is a helper for tests.
@@ -18,6 +21,15 @@ type ContextMock struct {
 //	ctx.SetDirPath("/foo")
 func (ctx *ContextMock) SetDirPath(path string) {
 	ctx.dirPath = path
+}
+
+// DirPath returns the context's working directory path.
+//
+//	ctx := &api.ContextMock{Context: &api.Context{}}
+//	ctx.SetDirPath("/foo")
+//	dirPath := ctx.DirPath()
+func (ctx *ContextMock) DirPath() string {
+	return ctx.dirPath
 }
 
 // SetValues sets the values.
@@ -54,7 +66,7 @@ func (ctx *ContextMock) SetCancelled(cancelled bool) {
 //
 //	ctx := &api.ContextMock{Context: &api.Context{}}
 //	outputPaths := ctx.OutputPaths()
-func (ctx ContextMock) OutputPaths() []string {
+func (ctx *ContextMock) OutputPaths() []string {
 	return ctx.outputPaths
 }
 
@@ -66,10 +78,57 @@ func (ctx *ContextMock) SetLogger(logger *zap.Logger) {
 	ctx.logger = logger
 }
 
-// SetEchoContext sets the echo.Context.
+// SetEchoContext sets the [echo.Context].
 //
 //	ctx := &api.ContextMock{Context: &api.Context{}}
 //	ctx.setEchoContext(c)
 func (ctx *ContextMock) SetEchoContext(c echo.Context) {
 	ctx.Context.echoCtx = c
 }
+
+// SetPathRename sets the [gotenberg.PathRename].
+//
+//	ctx := &api.ContextMock{Context: &api.Context{}}
+//	ctx.setPathRename(rename)
+func (ctx *ContextMock) SetPathRename(rename gotenberg.PathRename) {
+	ctx.Context.pathRename = rename
+}
+
+// RouterMock is a mock for the [Router] interface.
+type RouterMock struct {
+	RoutesMock func() ([]Route, error)
+}
+
+func (router *RouterMock) Routes() ([]Route, error) {
+	return router.RoutesMock()
+}
+
+// MiddlewareProviderMock is a mock for the [MiddlewareProvider] interface.
+type MiddlewareProviderMock struct {
+	MiddlewaresMock func() ([]Middleware, error)
+}
+
+func (provider *MiddlewareProviderMock) Middlewares() ([]Middleware, error) {
+	return provider.MiddlewaresMock()
+}
+
+// HealthCheckerMock is mock for the [HealthChecker] interface.
+type HealthCheckerMock struct {
+	ChecksMock func() ([]health.CheckerOption, error)
+	ReadyMock  func() error
+}
+
+func (mod *HealthCheckerMock) Checks() ([]health.CheckerOption, error) {
+	return mod.ChecksMock()
+}
+
+func (mod *HealthCheckerMock) Ready() error {
+	return mod.ReadyMock()
+}
+
+// Interface guards.
+var (
+	_ Router             = (*RouterMock)(nil)
+	_ MiddlewareProvider = (*MiddlewareProviderMock)(nil)
+	_ HealthChecker      = (*HealthCheckerMock)(nil)
+)
